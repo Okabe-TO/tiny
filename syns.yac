@@ -1,0 +1,87 @@
+%{
+#include "defs.h"
+#define YYSTYPE Cell *
+%}
+%token  STROKE FILL DISPLAY PERIOD
+        RECTANGLE LINE ARC STRING IMAGE
+        START END PASS ANGLE SWEEP AT
+        COLOR WIDTH INTEGER ATMARK WQUOTED
+        RED GREEN BLUE CYAN MAGENTA YELLOW GRAY BLACK WHITE
+        UNKNOWN;
+%%
+Program
+        : Statements                                                    { $$ = $1; }
+Statements
+        : Statement                                                     { $$ = $1; tree($$); }
+        | Statements Statement                                          { $$ = $2; tree($$); }
+Statement
+        : STROKE RECTANGLE RectAttributes PERIOD                        { $$ = node("STROKE", $3); } 
+        | FILL RECTANGLE RectAttributes PERIOD                          { $$ = node("FILL", $3); }
+        | STROKE LINE LineAttributes PERIOD                             { $$ = node("STROKE", $3); }
+        | FILL LINE LineAttributes PERIOD                               { $$ = node("FILL", $3); }
+        | STROKE ARC ArcAttributes PERIOD                               { $$ = node("STROKE", $3); }
+        | FILL ARC ArcAttributes PERIOD                                 { $$ = node("FILL", $3); }
+        | DISPLAY STRING StringAttributes PERIOD                        { $$ = node("DISPLAY", $3); }
+        | DISPLAY IMAGE ImageAttributes PERIOD                          { $$ = node("DISPLAY", $3); }
+RectAttributes
+        : RectCoordinates ColorAndWidth                                 { $$ = node("RECTANGLE", cons($1, $2)); }
+LineAttributes
+        : LineCoordinates ColorAndWidth                                 { $$ = node("LINE", cons($1, $2)); }
+ArcAttributes
+        : ArcValues ColorAndWidth                                       { $$ = node("ARC", cons($1, $2)); }
+StringAttributes
+        : AtPoint Wquoted                                               { $$ = node("STRING", cons($1, $2)); }
+ImageAttributes
+        : AtPoint Wquoted                                               { $$ = node("IMAGE", cons($1, $2)); }
+RectCoordinates
+        : StartCoordinate EndCoordinate                                 { $$ = cons($1, $2); }
+LineCoordinates
+        : StartCoordinate PassCoordinate EndCoordinate                  { $$ = cons($1, cons($2, $3)); }
+ArcValues
+        : StartCoordinate EndCoordinate Angle Sweep                     { $$ = cons(cons($1, $2), cons($3, $4)); }
+StartCoordinate
+        : START Coordinate                                              { $$ = node("START", $2); }
+PassCoordinate
+        : PASS Coordinate                                               { $$ = node("PASS", $2); }
+        | PASS Coordinate PassCoordinate                                { $$ = cons(node("PASS", $2), $3); }
+EndCoordinate
+        : END Coordinate                                                { $$ = node("END", $2); }
+ColorAndWidth
+        : COLOR Pigment                                                 { $$ = node("COW", $2); }
+        | COLOR Pigment WIDTH Integer                                   { $$ = node("COW", cons($2, $4)); }
+        | WIDTH Integer                                                 { $$ = node("COW", $2); }
+        | WIDTH Integer COLOR Pigment                                   { $$ = node("COW", cons($2, $4)); }
+AtPoint
+        : AT Coordinate                                                 { $$ = node("AT", $2); }
+Coordinate
+        : Integer ATMARK Integer                                        { $$ = node("XY", cons($1, $3)); }
+Angle
+        : ANGLE Integer                                                 { $$ = node("ANGLE", $2); }
+Sweep
+        : SWEEP Integer                                                 { $$ = node("SWEEP", $2); }
+Wquoted
+        : WQUOTED                                                       { $$ = leaf("WQUOTED", yytext); }
+Integer
+        : INTEGER                                                       { $$ = leaf("INTEGER", yytext); }
+
+Pigment
+        : RED                                                           { $$ = leaf("COLOR", yytext); }
+        | GREEN                                                         { $$ = leaf("COLOR", yytext); }
+        | BLUE                                                          { $$ = leaf("COLOR", yytext); }
+        | CYAN                                                          { $$ = leaf("COLOR", yytext); }
+        | MAGENTA                                                       { $$ = leaf("COLOR", yytext); }
+        | YELLOW                                                        { $$ = leaf("COLOR", yytext); }
+        | GRAY                                                          { $$ = leaf("COLOR", yytext); }
+        | BLACK                                                         { $$ = leaf("COLOR", yytext); }
+        | WHITE                                                         { $$ = leaf("COLOR", yytext); }
+
+
+
+
+
+%%
+#include "lex.yy.c"
+void yyerror(char *s) {
+	fprintf(stderr, "\n%s at %d: nearby \"%s\"\n\n", s, linecounter, yytext);
+	exit(EXIT_FAILURE);
+}

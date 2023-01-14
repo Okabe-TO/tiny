@@ -1,0 +1,77 @@
+%{
+#include "defs.h"
+#define YYSTYPE Cell *
+%}
+%token  STROKE FILL DISPLAY PERIOD
+        RECTANGLE LINE ARC STRING IMAGE
+        START END PASS ANGLE SWEEP AT
+        COLOR WIDTH INTEGER ATMARK WQUOTED
+        RED GREEN BLUE CYAN MAGENTA YELLOW GRAY BLACK WHITE
+        UNKNOWN;
+%%
+Program
+        : Statements                                    { $$ = $1; }
+Statements
+        : Statement                                     { $$ = $1; tree($$); }
+        | Statements Statement                          { $$ = $2; tree($$); }
+Statement
+        : STROKE LINE LineAttributes PERIOD             { $$ = node("STROKE", $3); }
+        | FILL LINE LineAttributes PERIOD               { $$ = node("FILL", $3); }
+        | DISPLAY STRING StringAttributes PERIOD        { $$ = node("DISPLAY", $3); }
+        | DISPLAY IMAGE ImageAttributes PERIOD          { $$ = node("DISPLAY", $3); }
+LineAttributes
+        : LineCoordinates ColorAndWidth                 { $$ = node("LINE", cons($1, $2)); }
+StringAttributes
+        : AtPoint Wquoted                               { $$ = node("STRING", cons($1, $2)); }
+ImageAttributes
+        : AtPoint Wquoted                               { $$ = node("IMAGE", cons($1, $2)); }
+
+LineCoordinates
+        : StartCoordinate PassCoordinate EndCoordinate  { $$ = cons($1, cons($2, $3)); }
+StartCoordinate
+        : START Coordinate                              { $$ =  node("START", $2); }
+PassCoordinate
+        : /* null */                                    { }
+        | PASS Coordinate                               { $$ = node("PASS", $2); }
+        | PassCoordinate PASS Coordinate                { $$ = cons(node("PASS", $3), $1); }
+EndCoordinate
+        : END Coordinate                                { $$ = node("END", $2); }
+ColorAndWidth
+        : WidthInteger ColorPigment                     { $$ = node("COW", cons($1, $2)); }
+        | ColorPigment WidthInteger                     { $$ = node("COW", cons($1, $2)); }
+ColorPigment
+        : /* null */                                    { }
+        | COLOR Pigment                                 { $$ = leaf("COLOR", yytext); }
+WidthInteger
+        : /* null */                                    { }
+        | WIDTH Integer                                 { $$ = leaf("INTEGER", yytext); }
+AtPoint
+        : AT Coordinate                                 { $$ = node("AT", $2); }
+Coordinate
+        : Integer ATMARK Integer                        { $$ = node("XY", cons($1, $3)); }
+Wquoted
+        : WQUOTED                                       { $$ = leaf("WQUOTED", yytext); }
+Integer
+        : INTEGER                                       { $$ = leaf("INTEGER", yytext); }
+
+Pigment
+        : RED                                           { $$ = leaf("RED", yytext); }
+        | GREEN                                         { $$ = leaf("GREEN", yytext); }
+        | BLUE                                          { $$ = leaf("BLUE", yytext); }
+        | CYAN                                          { $$ = leaf("CYAN", yytext); }
+        | MAGENTA                                       { $$ = leaf("MAGENTA", yytext); }
+        | YELLOW                                        { $$ = leaf("YELLOW", yytext); }
+        | GRAY                                          { $$ = leaf("GRAY", yytext); }
+        | BLACK                                         { $$ = leaf("BLACK", yytext); }
+        | WHITE                                         { $$ = leaf("WHITE", yytext); }
+
+
+
+
+
+%%
+#include "lex.yy.c"
+void yyerror(char *s) {
+	fprintf(stderr, "\n%s at %d: nearby \"%s\"\n\n", s, linecounter, yytext);
+	exit(EXIT_FAILURE);
+}
